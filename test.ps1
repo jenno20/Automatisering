@@ -7,3 +7,4 @@ $max_backup = 7
 
 #Timestamp
 $timestamp = Get-Date -Format "yyyyMMDDmmss"
+Write-Host "test"
