@@ -1,2 +1,0 @@
-#Script to create users
-
