@@ -12,7 +12,6 @@ $cred = New-Object System.Management.Automation.PSCredential ($domainAdminUser, 
 # Import the CSV file
 $users = Import-Csv -Path $csvFilePath
 
-
 # Debugging: Print out the first few rows of the users array to check the format
 $users | Select-Object -First 5
 
@@ -40,23 +39,25 @@ $scriptBlock = {
         
         Write-Host "Processing user: $($user.Username) with OUPath: $($user.OU)"
 
+        #Check if the OU field in the csv file is empty for that user
         if ([string]::IsNullOrEmpty($user.OU)) {
             Write-Warning "OU path is missing for user $($user.Username). Skipping user."
             continue  # Skip this user
         }
 
         # Check if the user already exists in Active Directory
-        $userExists = Get-ADUser -Identity $user.Username
+        try{
+            $userExists = Get-ADUser -Identity $user.Username
 
-        if ($userExists) {
-            Write-Warning "User $($user.Username) already exists. Skipping user creation."
-            continue
-        }
+            if ($userExists) {
+                Write-Host "User $($user.Username) already exists. Skipping user creation." -ForegroundColor Yellow
+                continue
+            }
+        }catch{Write-Host "$($user.Username) does not exist, will create user" -ForegroundColor Blue}
 
         # Check if the OU exists, and create it if not
         $OUPath = $user.OU
         try {
-            # Check if OU exists
             $OUExists = Get-ADOrganizationalUnit -Filter {DistinguishedName -eq $OUPath}
             if (-not $OUExists) {
                 Write-Host "OU $OUPath does not exist. Creating it now."
@@ -93,7 +94,7 @@ $scriptBlock = {
 
 #Invoke-Command to process all users
 try {
-    # Print users data for debugging (so we can ensure it's being passed)
+    # Print users data for debugging (so we can ensure it's being passed correctly)
     Write-Host "Processing $($users.Count) users from CSV..." -ForegroundColor Green
 
     Invoke-Command -ComputerName $domainController -Credential $cred -ScriptBlock $scriptBlock -ArgumentList $usersJson
